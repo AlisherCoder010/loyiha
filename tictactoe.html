@@ -1,0 +1,708 @@
+<title>Uch Taxta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&display=swap">
+
+<style>
+  /* Layout: a centered single-column stage — brand mark, score, board, controls — on a warm paper ground. */
+  :root {
+    --paper: #F2EADC;
+    --paper-soft: #ECE3D1;
+    --ink: #1E1A14;
+    --ink-soft: #574E42;
+    --muted: #9A8E7B;
+    --rule: #D9CDB4;
+    --x: #C94A3D;
+    --o: #2E7A78;
+    --win: #E7B04A;
+    --shadow: rgba(30, 26, 20, 0.08);
+    --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171410;
+      --paper-soft: #221D16;
+      --ink: #F2EADC;
+      --ink-soft: #BDB09A;
+      --muted: #7A6F5E;
+      --rule: #322A1F;
+      --x: #E66A5C;
+      --o: #58B6B2;
+      --win: #F0C878;
+      --shadow: rgba(0, 0, 0, 0.4);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #171410;
+    --paper-soft: #221D16;
+    --ink: #F2EADC;
+    --ink-soft: #BDB09A;
+    --muted: #7A6F5E;
+    --rule: #322A1F;
+    --x: #E66A5C;
+    --o: #58B6B2;
+    --win: #F0C878;
+    --shadow: rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px;
+    display: flex;
+    justify-content: center;
+    background-image:
+      radial-gradient(circle at 20% 10%, color-mix(in oklab, var(--paper-soft) 70%, transparent) 0, transparent 40%),
+      radial-gradient(circle at 85% 90%, color-mix(in oklab, var(--paper-soft) 70%, transparent) 0, transparent 45%);
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* Header */
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 14px;
+  }
+  .brand h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(32px, 8vw, 42px);
+    letter-spacing: -0.02em;
+    margin: 0;
+    line-height: 1;
+  }
+  .brand h1 em {
+    font-style: italic;
+    color: var(--x);
+    font-weight: 500;
+  }
+  .brand .no {
+    font-family: var(--font-body);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Mode toggle */
+  .mode {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    background: var(--paper-soft);
+    border-radius: 999px;
+    width: fit-content;
+    margin: 0 auto;
+    border: 1px solid var(--rule);
+  }
+  .mode button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .mode button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .mode button:focus-visible {
+    outline: 2px solid var(--x);
+    outline-offset: 2px;
+  }
+
+  /* Scoreboard */
+  .score {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .score .side {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 6px;
+    border-radius: 14px;
+    border: 1px solid var(--rule);
+    background: var(--paper-soft);
+    position: relative;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .score .side.active {
+    border-color: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 15%, transparent);
+  }
+  .score .side.x { color: var(--x); }
+  .score .side.o { color: var(--o); }
+  .score .label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .score .mark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 1;
+    font-style: italic;
+  }
+  .score .count {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .score .middle {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 4px;
+  }
+  .score .middle .label { color: var(--muted); }
+  .score .middle .count { font-size: 20px; }
+
+  /* Board */
+  .board-wrap {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--paper-soft);
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    box-shadow: 0 10px 30px -14px var(--shadow);
+    overflow: hidden;
+    position: relative;
+  }
+  .cell {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-style: italic;
+    font-size: clamp(48px, 18vw, 86px);
+    line-height: 1;
+    color: var(--ink);
+    transition: background 0.18s;
+  }
+  .cell:hover:not(:disabled):not(.taken) {
+    background: color-mix(in oklab, var(--ink) 4%, transparent);
+  }
+  .cell:focus-visible {
+    outline: 2px solid var(--x);
+    outline-offset: -8px;
+    border-radius: 10px;
+  }
+  .cell[data-mark="X"] { color: var(--x); }
+  .cell[data-mark="O"] { color: var(--o); }
+  .cell:disabled { cursor: default; }
+  .cell.taken { cursor: default; }
+  .cell.win { color: var(--ink); background: color-mix(in oklab, var(--win) 25%, transparent); }
+  .cell.win[data-mark="X"] { color: var(--x); }
+  .cell.win[data-mark="O"] { color: var(--o); }
+
+  .cell .glyph {
+    display: inline-block;
+    animation: pop 0.22s cubic-bezier(0.3, 1.4, 0.5, 1);
+    transform-origin: center;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  /* Grid lines drawn as inner borders using box-shadow via grid children borders */
+  .cell { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .cell:nth-child(3n) { border-right: 0; }
+  .cell:nth-child(n+7) { border-bottom: 0; }
+
+  /* Status strip */
+  .status {
+    text-align: center;
+    min-height: 2.2em;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+  }
+  .status .headline {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 22px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .status .headline em {
+    font-style: italic;
+    font-weight: 500;
+  }
+  .status .headline .x-mark { color: var(--x); }
+  .status .headline .o-mark { color: var(--o); }
+  .status .sub {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    appearance: none;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 11px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--x);
+    outline-offset: 2px;
+  }
+
+  /* Footer line */
+  .foot {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--muted);
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* Theme toggle in top corner */
+  .theme-toggle {
+    appearance: none;
+    border: 1px solid var(--rule);
+    background: var(--paper-soft);
+    color: var(--ink-soft);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .theme-toggle:hover { color: var(--ink); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--x); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cell .glyph { animation: none; }
+    .btn { transition: none; }
+  }
+</style>
+
+<main class="stage" aria-labelledby="t">
+  <header class="brand">
+    <h1 id="t">Uch <em>Taxta</em></h1>
+    <button class="theme-toggle" id="themeBtn" aria-label="Mavzuni almashtirish" title="Mavzu">◐</button>
+  </header>
+
+  <div class="mode" role="group" aria-label="O'yin rejimi">
+    <button id="mode2p" aria-pressed="true">2 O'yinchi</button>
+    <button id="modeAi" aria-pressed="false">Kompyuter</button>
+  </div>
+
+  <section class="score" aria-label="Hisob">
+    <div class="side x" id="sideX">
+      <span class="label">O'yinchi</span>
+      <span class="mark">X</span>
+      <span class="count" id="scoreX">0</span>
+    </div>
+    <div class="middle">
+      <span class="label">Durrang</span>
+      <span class="count" id="scoreD">0</span>
+    </div>
+    <div class="side o" id="sideO">
+      <span class="label" id="sideOLabel">O'yinchi</span>
+      <span class="mark">O</span>
+      <span class="count" id="scoreO">0</span>
+    </div>
+  </section>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="O'yin maydoni">
+      <button class="cell" data-i="0" role="gridcell" aria-label="1-chi katak"></button>
+      <button class="cell" data-i="1" role="gridcell" aria-label="2-chi katak"></button>
+      <button class="cell" data-i="2" role="gridcell" aria-label="3-chi katak"></button>
+      <button class="cell" data-i="3" role="gridcell" aria-label="4-chi katak"></button>
+      <button class="cell" data-i="4" role="gridcell" aria-label="5-chi katak"></button>
+      <button class="cell" data-i="5" role="gridcell" aria-label="6-chi katak"></button>
+      <button class="cell" data-i="6" role="gridcell" aria-label="7-chi katak"></button>
+      <button class="cell" data-i="7" role="gridcell" aria-label="8-chi katak"></button>
+      <button class="cell" data-i="8" role="gridcell" aria-label="9-chi katak"></button>
+    </div>
+  </div>
+
+  <div class="status" aria-live="polite">
+    <div class="headline" id="statusHead">Navbat: <em class="x-mark">X</em></div>
+    <div class="sub" id="statusSub">O'yin boshlandi</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="newRound">Yangi o'yin</button>
+    <button class="btn ghost" id="resetScore">Hisobni tozalash</button>
+  </div>
+
+  <div class="foot">Uch qatorga tering</div>
+</main>
+
+<script>
+  (function () {
+    'use strict';
+
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    const state = {
+      board: Array(9).fill(null),
+      turn: 'X',
+      over: false,
+      mode: '2p', // '2p' | 'ai'
+      score: { X: 0, O: 0, D: 0 },
+      starts: 'X', // who starts the next round, alternates
+      winLine: null
+    };
+
+    const els = {
+      cells: Array.from(document.querySelectorAll('.cell')),
+      scoreX: document.getElementById('scoreX'),
+      scoreO: document.getElementById('scoreO'),
+      scoreD: document.getElementById('scoreD'),
+      head: document.getElementById('statusHead'),
+      sub: document.getElementById('statusSub'),
+      newRound: document.getElementById('newRound'),
+      resetScore: document.getElementById('resetScore'),
+      mode2p: document.getElementById('mode2p'),
+      modeAi: document.getElementById('modeAi'),
+      sideX: document.getElementById('sideX'),
+      sideO: document.getElementById('sideO'),
+      sideOLabel: document.getElementById('sideOLabel'),
+      themeBtn: document.getElementById('themeBtn')
+    };
+
+    // ---- Theme toggle (per-viewer, remembered)
+    try {
+      const saved = localStorage.getItem('tt_theme');
+      if (saved === 'dark' || saved === 'light') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    } catch (e) { /* ignore */ }
+
+    els.themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      let next;
+      if (current === 'dark') next = 'light';
+      else if (current === 'light') next = 'dark';
+      else next = prefersDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('tt_theme', next); } catch (e) { /* ignore */ }
+    });
+
+    // ---- Winner check
+    function findWin(board) {
+      for (const line of WINS) {
+        const [a,b,c] = line;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return { mark: board[a], line };
+        }
+      }
+      if (board.every(Boolean)) return { mark: 'D', line: null };
+      return null;
+    }
+
+    // ---- Minimax AI
+    function emptyIndices(board) {
+      const out = [];
+      for (let i = 0; i < 9; i++) if (!board[i]) out.push(i);
+      return out;
+    }
+
+    function minimax(board, player, aiMark, humanMark, depth) {
+      const result = findWin(board);
+      if (result) {
+        if (result.mark === aiMark) return { score: 10 - depth };
+        if (result.mark === humanMark) return { score: depth - 10 };
+        return { score: 0 };
+      }
+
+      const moves = [];
+      const empties = emptyIndices(board);
+      for (const idx of empties) {
+        board[idx] = player;
+        const next = player === aiMark ? humanMark : aiMark;
+        const result = minimax(board, next, aiMark, humanMark, depth + 1);
+        moves.push({ idx, score: result.score });
+        board[idx] = null;
+      }
+
+      if (player === aiMark) {
+        let best = -Infinity, bestMove = moves[0];
+        for (const m of moves) if (m.score > best) { best = m.score; bestMove = m; }
+        return bestMove;
+      } else {
+        let best = Infinity, bestMove = moves[0];
+        for (const m of moves) if (m.score < best) { best = m.score; bestMove = m; }
+        return bestMove;
+      }
+    }
+
+    function aiMove() {
+      const human = 'X', ai = 'O';
+      const empties = emptyIndices(state.board);
+      if (empties.length === 0) return;
+
+      let choice;
+      // First move: pick center or random corner for variety
+      if (empties.length === 9) {
+        choice = 4;
+      } else if (empties.length === 8 && !state.board[4]) {
+        choice = 4;
+      } else {
+        const copy = state.board.slice();
+        const best = minimax(copy, ai, ai, human, 0);
+        choice = best.idx;
+      }
+      place(choice);
+    }
+
+    // ---- Place a mark
+    function place(i) {
+      if (state.over || state.board[i]) return;
+      state.board[i] = state.turn;
+      renderCell(i);
+
+      const result = findWin(state.board);
+      if (result) {
+        state.over = true;
+        if (result.mark === 'D') {
+          state.score.D += 1;
+          showResult('draw');
+        } else {
+          state.score[result.mark] += 1;
+          state.winLine = result.line;
+          highlightWin(result.line);
+          showResult('win', result.mark);
+        }
+        updateScore();
+        updateActiveSide();
+        return;
+      }
+
+      state.turn = state.turn === 'X' ? 'O' : 'X';
+      updateHeader();
+      updateActiveSide();
+
+      if (!state.over && state.mode === 'ai' && state.turn === 'O') {
+        setTimeout(aiMove, 420);
+      }
+    }
+
+    function renderCell(i) {
+      const cell = els.cells[i];
+      const mark = state.board[i];
+      cell.classList.add('taken');
+      cell.setAttribute('data-mark', mark);
+      cell.setAttribute('aria-label', `${i + 1}-chi katak, ${mark}`);
+      cell.innerHTML = `<span class="glyph">${mark}</span>`;
+    }
+
+    function highlightWin(line) {
+      for (const i of line) els.cells[i].classList.add('win');
+    }
+
+    function updateHeader() {
+      const mark = state.turn;
+      const cls = mark === 'X' ? 'x-mark' : 'o-mark';
+      let who;
+      if (state.mode === 'ai' && mark === 'O') who = 'Kompyuter';
+      else who = 'Navbat';
+      els.head.innerHTML = `${who}: <em class="${cls}">${mark}</em>`;
+      els.sub.textContent = state.mode === 'ai'
+        ? (mark === 'X' ? 'Sening yurishing' : 'Kompyuter o\'ylamoqda…')
+        : 'Belgini qo\'ying';
+    }
+
+    function updateActiveSide() {
+      els.sideX.classList.toggle('active', !state.over && state.turn === 'X');
+      els.sideO.classList.toggle('active', !state.over && state.turn === 'O');
+    }
+
+    function showResult(kind, mark) {
+      if (kind === 'draw') {
+        els.head.innerHTML = `<em>Durrang</em>`;
+        els.sub.textContent = 'Hech kim yutmadi';
+      } else {
+        const cls = mark === 'X' ? 'x-mark' : 'o-mark';
+        let winnerText;
+        if (state.mode === 'ai') {
+          winnerText = mark === 'X' ? 'Sen yutding!' : 'Kompyuter yutdi';
+        } else {
+          winnerText = `<em class="${cls}">${mark}</em> g'olib`;
+        }
+        els.head.innerHTML = winnerText;
+        els.sub.textContent = 'Yangi o\'yinni boshlang';
+      }
+    }
+
+    function updateScore() {
+      els.scoreX.textContent = state.score.X;
+      els.scoreO.textContent = state.score.O;
+      els.scoreD.textContent = state.score.D;
+    }
+
+    function newRound() {
+      state.board = Array(9).fill(null);
+      state.over = false;
+      state.winLine = null;
+      // alternate starter
+      state.starts = state.starts === 'X' ? 'O' : 'X';
+      state.turn = state.starts;
+
+      for (const cell of els.cells) {
+        cell.classList.remove('taken', 'win');
+        cell.removeAttribute('data-mark');
+        cell.innerHTML = '';
+        const i = cell.getAttribute('data-i');
+        cell.setAttribute('aria-label', `${Number(i) + 1}-chi katak`);
+      }
+      updateHeader();
+      updateActiveSide();
+
+      if (state.mode === 'ai' && state.turn === 'O') {
+        setTimeout(aiMove, 500);
+      }
+    }
+
+    function resetScore() {
+      state.score = { X: 0, O: 0, D: 0 };
+      updateScore();
+      newRound();
+    }
+
+    function setMode(m) {
+      if (state.mode === m) return;
+      state.mode = m;
+      els.mode2p.setAttribute('aria-pressed', m === '2p' ? 'true' : 'false');
+      els.modeAi.setAttribute('aria-pressed', m === 'ai' ? 'true' : 'false');
+      els.sideOLabel.textContent = m === 'ai' ? 'Kompyuter' : 'O\'yinchi';
+      state.score = { X: 0, O: 0, D: 0 };
+      updateScore();
+      // Reset starter so X always begins when switching
+      state.starts = 'O'; // so newRound flips to X
+      newRound();
+    }
+
+    // ---- Wire up
+    els.cells.forEach((cell) => {
+      cell.addEventListener('click', () => {
+        const i = Number(cell.getAttribute('data-i'));
+        if (state.mode === 'ai' && state.turn === 'O') return; // ignore clicks during AI turn
+        place(i);
+      });
+    });
+
+    els.newRound.addEventListener('click', newRound);
+    els.resetScore.addEventListener('click', resetScore);
+    els.mode2p.addEventListener('click', () => setMode('2p'));
+    els.modeAi.addEventListener('click', () => setMode('ai'));
+
+    // Keyboard: arrow navigation across the board
+    document.addEventListener('keydown', (e) => {
+      const focused = document.activeElement;
+      if (!focused || !focused.classList.contains('cell')) return;
+      const i = Number(focused.getAttribute('data-i'));
+      const row = Math.floor(i / 3), col = i % 3;
+      let nr = row, nc = col;
+      if (e.key === 'ArrowRight') nc = (col + 1) % 3;
+      else if (e.key === 'ArrowLeft') nc = (col + 2) % 3;
+      else if (e.key === 'ArrowDown') nr = (row + 1) % 3;
+      else if (e.key === 'ArrowUp') nr = (row + 2) % 3;
+      else return;
+      e.preventDefault();
+      els.cells[nr * 3 + nc].focus();
+    });
+
+    // Initial render
+    updateScore();
+    updateHeader();
+    updateActiveSide();
+  })();
+</script>

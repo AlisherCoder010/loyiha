@@ -1,0 +1,272 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Hisoblagich</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: single centered card, display above a 4×5 keypad grid */
+  :root {
+    --bg: #ebe7df;
+    --surface: #f7f4ee;
+    --ink: #1a1a1c;
+    --muted: #6b6760;
+    --line: #d7d1c5;
+    --key: #ffffff;
+    --key-op: #e8e2d4;
+    --accent: #c2451f;
+    --accent-ink: #ffffff;
+    --shadow: 0 1px 0 rgba(0,0,0,0.04), 0 20px 40px -24px rgba(60,40,20,0.25);
+    --font-display: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --font-ui: "Space Grotesk", system-ui, sans-serif;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {}
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15141a;
+      --surface: #1e1d24;
+      --ink: #f1ece2;
+      --muted: #8a857c;
+      --line: #2c2a33;
+      --key: #26242d;
+      --key-op: #302d38;
+      --accent: #e8683f;
+      --accent-ink: #15141a;
+      --shadow: 0 1px 0 rgba(255,255,255,0.02), 0 24px 48px -24px rgba(0,0,0,0.6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15141a;
+    --surface: #1e1d24;
+    --ink: #f1ece2;
+    --muted: #8a857c;
+    --line: #2c2a33;
+    --key: #26242d;
+    --key-op: #302d38;
+    --accent: #e8683f;
+    --accent-ink: #15141a;
+    --shadow: 0 1px 0 rgba(255,255,255,0.02), 0 24px 48px -24px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .app { width: 100%; max-width: 360px; }
+  .label {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+  .screen {
+    text-align: right;
+    padding: 18px 10px 22px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 16px;
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+  }
+  .history {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--muted);
+    min-height: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .result {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .result::-webkit-scrollbar { display: none; }
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  button {
+    font: inherit;
+    font-size: 18px;
+    font-weight: 500;
+    background: var(--key);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 0;
+    cursor: pointer;
+    transition: transform 0.06s, background 0.15s;
+  }
+  button:hover { background: color-mix(in oklab, var(--key) 92%, var(--ink)); }
+  button:active { transform: scale(0.96); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.op { background: var(--key-op); color: var(--ink); }
+  button.fn { background: transparent; color: var(--muted); font-size: 15px; }
+  button.eq { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.wide { grid-column: span 2; }
+  @media (prefers-reduced-motion: reduce) {
+    button, button:active { transition: none; transform: none; }
+  }
+</style>
+
+<div class="app">
+  <div class="label"><span>Hisoblagich</span><span id="mode">o'nlik</span></div>
+  <div class="card">
+    <div class="screen">
+      <div class="history" id="history">&nbsp;</div>
+      <div class="result" id="result">0</div>
+    </div>
+    <div class="pad">
+      <button class="fn" data-k="AC">AC</button>
+      <button class="fn" data-k="+/-">+/−</button>
+      <button class="fn" data-k="%">%</button>
+      <button class="op" data-k="÷">÷</button>
+
+      <button data-k="7">7</button>
+      <button data-k="8">8</button>
+      <button data-k="9">9</button>
+      <button class="op" data-k="×">×</button>
+
+      <button data-k="4">4</button>
+      <button data-k="5">5</button>
+      <button data-k="6">6</button>
+      <button class="op" data-k="−">−</button>
+
+      <button data-k="1">1</button>
+      <button data-k="2">2</button>
+      <button data-k="3">3</button>
+      <button class="op" data-k="+">+</button>
+
+      <button class="wide" data-k="0">0</button>
+      <button data-k=",">,</button>
+      <button class="eq" data-k="=">=</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const resultEl = document.getElementById('result');
+  const histEl = document.getElementById('history');
+
+  let current = '0';
+  let previous = null;
+  let op = null;
+  let justEvaluated = false;
+
+  const fmt = (n) => {
+    if (!isFinite(n)) return '∞';
+    const s = Number(n.toPrecision(12)).toString();
+    return s.replace('.', ',');
+  };
+  const parse = (s) => parseFloat(s.replace(',', '.'));
+
+  const compute = (a, b, o) => {
+    switch (o) {
+      case '+': return a + b;
+      case '−': return a - b;
+      case '×': return a * b;
+      case '÷': return b === 0 ? NaN : a / b;
+    }
+  };
+
+  const render = () => {
+    resultEl.textContent = current;
+    histEl.innerHTML = previous !== null && op
+      ? `${fmt(previous)} ${op}${justEvaluated ? '' : ''}`
+      : '&nbsp;';
+  };
+
+  const inputDigit = (d) => {
+    if (justEvaluated) { current = '0'; justEvaluated = false; }
+    current = current === '0' ? d : current + d;
+  };
+  const inputComma = () => {
+    if (justEvaluated) { current = '0'; justEvaluated = false; }
+    if (!current.includes(',')) current += ',';
+  };
+  const setOp = (nextOp) => {
+    const n = parse(current);
+    if (previous !== null && op && !justEvaluated) {
+      const r = compute(previous, n, op);
+      previous = r;
+      current = fmt(r);
+    } else {
+      previous = n;
+    }
+    op = nextOp;
+    justEvaluated = false;
+    current = '0';
+    // Keep current empty-looking but allow next digit to replace
+    resultEl.textContent = fmt(previous);
+    histEl.textContent = `${fmt(previous)} ${op}`;
+  };
+  const equals = () => {
+    if (previous === null || !op) return;
+    const r = compute(previous, parse(current), op);
+    histEl.textContent = `${fmt(previous)} ${op} ${current} =`;
+    current = fmt(r);
+    previous = null;
+    op = null;
+    justEvaluated = true;
+    resultEl.textContent = current;
+  };
+  const clearAll = () => {
+    current = '0'; previous = null; op = null; justEvaluated = false; render();
+  };
+  const negate = () => {
+    if (current === '0') return;
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+    resultEl.textContent = current;
+  };
+  const percent = () => {
+    current = fmt(parse(current) / 100);
+    resultEl.textContent = current;
+  };
+
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.k;
+      if (/^[0-9]$/.test(k)) { inputDigit(k); resultEl.textContent = current; }
+      else if (k === ',') { inputComma(); resultEl.textContent = current; }
+      else if (k === 'AC') clearAll();
+      else if (k === '+/-') negate();
+      else if (k === '%') percent();
+      else if (k === '=') equals();
+      else setOp(k);
+    });
+  });
+
+  const keyMap = { '/': '÷', '*': '×', '-': '−', '+': '+', 'Enter': '=', '=': '=', 'Escape': 'AC', 'Backspace': 'AC', '.': ',', ',': ',' };
+  document.addEventListener('keydown', (e) => {
+    if (/^[0-9]$/.test(e.key)) { inputDigit(e.key); resultEl.textContent = current; return; }
+    const m = keyMap[e.key];
+    if (!m) return;
+    e.preventDefault();
+    const btn = document.querySelector(`button[data-k="${m}"]`);
+    if (btn) btn.click();
+  });
+
+  render();
+</script>

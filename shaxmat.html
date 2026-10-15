@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shaxmat</title>
+<style>
+  :root {
+    --bg: #1f1b16;
+    --panel: #2b251e;
+    --text: #f1e7d6;
+    --muted: #b8a88f;
+    --light: #eed9b6;
+    --dark: #b07d52;
+    --accent: #e0a64a;
+    --sel: rgba(246, 222, 90, .65);
+    --last: rgba(205, 210, 106, .55);
+    --check: radial-gradient(circle, #ff4a3a 0%, rgba(255,74,58,.6) 40%, transparent 75%);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .app { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .status {
+    text-align: center; font-size: 20px; font-weight: 600; margin-bottom: 10px; min-height: 28px;
+  }
+  .status.alert { color: #ff7a6b; }
+  .status.done { color: var(--accent); }
+  .board {
+    width: min(88vw, 560px); height: min(88vw, 560px);
+    display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+    border: 10px solid #4a3523; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    user-select: none;
+  }
+  .sq { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .sq.l { background: var(--light); }
+  .sq.d { background: var(--dark); }
+  .sq.last::before, .sq.sel::before { content: ""; position: absolute; inset: 0; }
+  .sq.last::before { background: var(--last); }
+  .sq.sel::before { background: var(--sel); }
+  .sq.check { background-image: var(--check); }
+  .piece {
+    position: relative; font-size: min(9vw, 54px); line-height: 1;
+    font-family: "Segoe UI Symbol", "DejaVu Sans", "Noto Sans Symbols2", serif;
+    transition: transform .1s;
+  }
+  .piece.w { color: #fffaf0; text-shadow: 0 0 2px #000, 0 0 1px #000, 0 2px 3px rgba(0,0,0,.5); }
+  .piece.b { color: #1a1410; text-shadow: 0 0 1px #fff8, 0 2px 3px rgba(0,0,0,.4); }
+  .sq:hover .piece { transform: scale(1.06); }
+  .dot { position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 60, 20, .35); }
+  .ring { position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgba(20, 60, 20, .35); }
+  .coord { position: absolute; font-size: 11px; font-weight: 700; opacity: .75; }
+  .coord.f { right: 3px; bottom: 1px; }
+  .coord.r { left: 3px; top: 1px; }
+  .sq.l .coord { color: var(--dark); }
+  .sq.d .coord { color: var(--light); }
+
+  .panel {
+    width: min(88vw, 300px); background: var(--panel); border-radius: 10px; padding: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  h1 { margin: 0 0 14px; font-size: 26px; letter-spacing: .5px; }
+  h2 { margin: 16px 0 8px; font-size: 16px; color: var(--muted); font-weight: 600; }
+  .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+  .row label { color: var(--muted); }
+  select, button {
+    font: inherit; color: var(--text); background: #3a3128; border: 1px solid #574a3c;
+    border-radius: 6px; padding: 7px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: #4a3f33; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .btns button:first-child { grid-column: span 2; background: var(--accent); color: #2b1d08; font-weight: 700; border: none; }
+  .captured { margin-top: 14px; font-size: 22px; min-height: 60px; }
+  .captured div { min-height: 28px; font-family: "Segoe UI Symbol", "DejaVu Sans", serif; }
+  .moves {
+    margin: 0; padding: 8px 8px 8px 34px; max-height: 220px; overflow-y: auto;
+    background: #231e18; border-radius: 6px; font-family: Consolas, monospace; font-size: 14px;
+  }
+  .moves li { padding: 2px 0; }
+  .moves span { display: inline-block; width: 70px; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+  .modal.hidden { display: none; }
+  .modal .box { background: var(--panel); padding: 20px 24px; border-radius: 10px; text-align: center; }
+  .modal p { margin: 0 0 12px; }
+  #promoChoices { display: flex; gap: 10px; }
+  #promoChoices button { width: 70px; height: 70px; padding: 0; background: var(--light); border: none; }
+  #promoChoices .piece { font-size: 50px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <div id="status" class="status"></div>
+    <div id="board" class="board"></div>
+  </div>
+  <aside class="panel">
+    <h1>♞ Shaxmat</h1>
+    <div class="row">
+      <label for="mode">Rejim</label>
+      <select id="mode">
+        <option value="ai">Kompyuterga qarshi</option>
+        <option value="pvp">Ikki oʻyinchi</option>
+      </select>
+    </div>
+    <div class="row ai-only">
+      <label for="level">Daraja</label>
+      <select id="level">
+        <option value="1">Oson</option>
+        <option value="2" selected>Oʻrtacha</option>
+        <option value="3">Qiyin</option>
+      </select>
+    </div>
+    <div class="row ai-only">
+      <label for="color">Rangingiz</label>
+      <select id="color">
+        <option value="w">Oq</option>
+        <option value="b">Qora</option>
+      </select>
+    </div>
+    <div class="btns">
+      <button id="newBtn">Yangi oʻyin</button>
+      <button id="undoBtn">↶ Orqaga</button>
+      <button id="flipBtn">⇅ Aylantirish</button>
+    </div>
+    <div class="captured">
+      <div id="capByW"></div>
+      <div id="capByB"></div>
+    </div>
+    <h2>Yurishlar</h2>
+    <ol id="moves" class="moves"></ol>
+  </aside>
+</div>
+
+<div id="promo" class="modal hidden">
+  <div class="box">
+    <p>Piyodani nimaga aylantirasiz?</p>
+    <div id="promoChoices"></div>
+  </div>
+</div>
+
+<script>
+// ===== ENGINE START =====
+const GLYPH = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞", P: "♟" };
+const VAL = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 };
+const KN = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const KG = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const ROOKD = [[-1,0],[1,0],[0,-1],[0,1]];
+const BISD = [[-1,-1],[-1,1],[1,-1],[1,1]];
+const FILES = "abcdefgh";
+const inB = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+const other = (c) => (c === "w" ? "b" : "w");
+const sqName = (s) => FILES[s & 7] + (8 - (s >> 3));
+
+function newState() {
+  const b = Array(64).fill(null);
+  const back = ["R","N","B","Q","K","B","N","R"];
+  for (let c = 0; c < 8; c++) {
+    b[c] = "b" + back[c]; b[8 + c] = "bP";
+    b[48 + c] = "wP"; b[56 + c] = "w" + back[c];
+  }
+  return { board: b, turn: "w", castle: { wK: true, wQ: true, bK: true, bQ: true }, ep: -1, half: 0 };
+}
+
+function attacked(b, sq, by) {
+  const r = sq >> 3, c = sq & 7;
+  const pr = by === "w" ? r + 1 : r - 1;
+  for (const dc of [-1, 1]) if (inB(pr, c + dc) && b[pr * 8 + c + dc] === by + "P") return true;
+  for (const [dr, dc] of KN) { const rr = r + dr, cc = c + dc; if (inB(rr, cc) && b[rr * 8 + cc] === by + "N") return true; }
+  for (const [dr, dc] of KG) { const rr = r + dr, cc = c + dc; if (inB(rr, cc) && b[rr * 8 + cc] === by + "K") return true; }
+  for (const [dr, dc] of ROOKD) {
+    let rr = r + dr, cc = c + dc;
+    while (inB(rr, cc)) { const p = b[rr * 8 + cc]; if (p) { if (p === by + "R" || p === by + "Q") return true; break; } rr += dr; cc += dc; }
+  }
+  for (const [dr, dc] of BISD) {
+    let rr = r + dr, cc = c + dc;
+    while (inB(rr, cc)) { const p = b[rr * 8 + cc]; if (p) { if (p === by + "B" || p === by + "Q") return true; break; } rr += dr; cc += dc; }
+  }
+  return false;
+}
+const kingSq = (b, color) => b.indexOf(color + "K");
+const inCheck = (st, color) => attacked(st.board, kingSq(st.board, color), other(color));
+
+function pseudo(st) {
+  const b = st.board, me = st.turn, op = other(me), ms = [];
+  for (let sq = 0; sq < 64; sq++) {
+    const p = b[sq];
+    if (!p || p[0] !== me) continue;
+    const t = p[1], r = sq >> 3, c = sq & 7;
+    const add = (to, extra) => ms.push(Object.assign({ from: sq, to: to, piece: p, captured: b[to] }, extra || {}));
+    if (t === "P") {
+      const d = me === "w" ? -1 : 1, start = me === "w" ? 6 : 1, last = me === "w" ? 0 : 7;
+      const pushP = (to, extra) => {
+        if ((to >> 3) === last) for (const pr of ["Q","R","B","N"]) add(to, Object.assign({ promo: pr }, extra || {}));
+        else add(to, extra);
+      };
+      const r1 = r + d;
+      if (inB(r1, c) && !b[r1 * 8 + c]) {
+        pushP(r1 * 8 + c);
+        const r2 = r + 2 * d;
+        if (r === start && !b[r2 * 8 + c]) add(r2 * 8 + c, { dbl: true });
+      }
+      for (const dc of [-1, 1]) {
+        const cc = c + dc;
+        if (!inB(r1, cc)) continue;
+        const to = r1 * 8 + cc;
+        if (b[to] && b[to][0] === op) pushP(to);
+        else if (to === st.ep) add(to, { ep: true, captured: op + "P" });
+      }
+    } else if (t === "N" || t === "K") {
+      for (const [dr, dc] of (t === "N" ? KN : KG)) {
+        const rr = r + dr, cc = c + dc;
+        if (!inB(rr, cc)) continue;
+        const to = rr * 8 + cc;
+        if (!b[to] || b[to][0] === op) add(to);
+      }
+      const home = me === "w" ? 60 : 4;
+      if (t === "K" && sq === home && !attacked(b, home, op)) {
+        if (st.castle[me + "K"] && !b[home + 1] && !b[home + 2] && b[home + 3] === me + "R" &&
+            !attacked(b, home + 1, op) && !attacked(b, home + 2, op)) add(home + 2, { castle: "K" });
+        if (st.castle[me + "Q"] && !b[home - 1] && !b[home - 2] && !b[home - 3] && b[home - 4] === me + "R" &&
+            !attacked(b, home - 1, op) && !attacked(b, home - 2, op)) add(home - 2, { castle: "Q" });
+      }
+    } else {
+      const dirs = t === "R" ? ROOKD : t === "B" ? BISD : ROOKD.concat(BISD);
+      for (const [dr, dc] of dirs) {
+        let rr = r + dr, cc = c + dc;
+        while (inB(rr, cc)) {
+          const to = rr * 8 + cc;
+          if (!b[to]) add(to);
+          else { if (b[to][0] === op) add(to); break; }
+          rr += dr; cc += dc;
+        }
+      }
+    }
+  }
+  return ms;
+}
+
+const CORNERS = { 56: "wQ", 63: "wK", 0: "bQ", 7: "bK" };
+function make(st, m) {
+  const b = st.board.slice(), me = st.turn;
+  b[m.to] = m.promo ? me + m.promo : m.piece;
+  b[m.from] = null;
+  if (m.ep) b[(m.from >> 3) * 8 + (m.to & 7)] = null;
+  if (m.castle === "K") { b[m.to - 1] = b[m.to + 1]; b[m.to + 1] = null; }
+  if (m.castle === "Q") { b[m.to + 1] = b[m.to - 2]; b[m.to - 2] = null; }
+  const cs = Object.assign({}, st.castle);
+  if (m.piece[1] === "K") { cs[me + "K"] = false; cs[me + "Q"] = false; }
+  if (CORNERS[m.from]) cs[CORNERS[m.from]] = false;
+  if (CORNERS[m.to]) cs[CORNERS[m.to]] = false;
+  return {
+    board: b, turn: other(me), castle: cs,
+    ep: m.dbl ? (m.from + m.to) / 2 : -1,
+    half: (m.piece[1] === "P" || m.captured) ? 0 : st.half + 1
+  };
+}
+
+function legal(st) {
+  return pseudo(st).filter((m) => {
+    const n = make(st, m);
+    return !attacked(n.board, kingSq(n.board, st.turn), n.turn);
+  });
+}
+
+function san(st, m, list) {
+  let s;
+  if (m.castle) s = m.castle === "K" ? "O-O" : "O-O-O";
+  else {
+    const t = m.piece[1];
+    if (t === "P") {
+      s = (m.captured ? FILES[m.from & 7] + "x" : "") + sqName(m.to) + (m.promo ? "=" + m.promo : "");
+    } else {
+      let dis = "";
+      const others = list.filter((o) => o.piece === m.piece && o.to === m.to && o.from !== m.from);
+      if (others.length) {
+        if (others.every((o) => (o.from & 7) !== (m.from & 7))) dis = FILES[m.from & 7];
+        else if (others.every((o) => (o.from >> 3) !== (m.from >> 3))) dis = String(8 - (m.from >> 3));
+        else dis = sqName(m.from);
+      }
+      s = t + dis + (m.captured ? "x" : "") + sqName(m.to);
+    }
+  }
+  const n = make(st, m);
+  if (inCheck(n, n.turn)) s += legal(n).length ? "+" : "#";
+  return s;
+}
+
+// --- kompyuter (AI) ---
+function evalBoard(b) {
+  let s = 0;
+  for (let sq = 0; sq < 64; sq++) {
+    const p = b[sq];
+    if (!p) continue;
+    const t = p[1], r = sq >> 3, c = sq & 7;
+    const centre = 3.5 - Math.max(Math.abs(3.5 - r), Math.abs(3.5 - c));
+    let v = VAL[t];
+    if (t === "N") v += centre * 12;
+    else if (t === "B") v += centre * 6;
+    else if (t === "Q") v += centre * 2;
+    else if (t === "P") {
+      const adv = p[0] === "w" ? 6 - r : r - 1;
+      v += adv * 6 + ((c === 3 || c === 4) ? adv * 4 : 0);
+    } else if (t === "K") {
+      v += (p[0] === "w" ? (r === 7 ? 10 : 0) : (r === 0 ? 10 : 0)) - centre * 4;
+    }
+    s += p[0] === "w" ? v : -v;
+  }
+  return s;
+}
+
+function orderScore(m) {
+  let s = 0;
+  if (m.captured) s += VAL[m.captured[1]] * 10 - VAL[m.piece[1]];
+  if (m.promo) s += VAL[m.promo] * 10;
+  return s;
+}
+
+function negamax(st, depth, alpha, beta) {
+  if (depth === 0) { const e = evalBoard(st.board); return st.turn === "w" ? e : -e; }
+  const ms = legal(st);
+  if (!ms.length) return inCheck(st, st.turn) ? -100000 - depth : 0;
+  ms.sort((a, b) => orderScore(b) - orderScore(a));
+  let best = -Infinity;
+  for (const m of ms) {
+    const v = -negamax(make(st, m), depth - 1, -beta, -alpha);
+    if (v > best) best = v;
+    if (v > alpha) alpha = v;
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+
+function bestMove(st, depth) {
+  const ms = legal(st);
+  for (let i = ms.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ms[i], ms[j]] = [ms[j], ms[i]]; }
+  ms.sort((a, b) => orderScore(b) - orderScore(a));
+  let best = ms[0], bv = -Infinity, alpha = -Infinity;
+  for (const m of ms) {
+    let v = -negamax(make(st, m), depth - 1, -Infinity, -alpha);
+    if (depth === 1) v += Math.random() * 40; // oson darajada biroz tasodif
+    if (v > bv) { bv = v; best = m; }
+    if (v > alpha) alpha = v;
+  }
+  return best;
+}
+// ===== ENGINE END =====
+
+// ===== UI =====
+const $ = (id) => document.getElementById(id);
+const boardEl = $("board"), statusEl = $("status");
+let st, hist, sanList, sel, targets, lastMove, flipped = false, over, thinking, mode, humanColor, statusOverride;
+
+function newGame() {
+  st = newState(); hist = []; sanList = []; sel = -1; targets = []; lastMove = null;
+  over = false; thinking = false; statusOverride = null;
+  mode = $("mode").value; humanColor = mode === "ai" ? $("color").value : "w";
+  flipped = mode === "ai" && humanColor === "b";
+  document.querySelectorAll(".ai-only").forEach((e) => (e.style.display = mode === "ai" ? "" : "none"));
+  updateStatus(); render(); maybeAI();
+}
+
+function pieceHTML(p) {
+  return `<span class="piece ${p[0]}">${GLYPH[p[1]]}︎</span>`;
+}
+
+function render() {
+  const ksq = inCheck(st, st.turn) ? kingSq(st.board, st.turn) : -1;
+  let html = "";
+  for (let i = 0; i < 64; i++) {
+    const sq = flipped ? 63 - i : i;
+    const r = sq >> 3, c = sq & 7;
+    const cls = ["sq", (r + c) % 2 === 0 ? "l" : "d"];
+    if (lastMove && (sq === lastMove.from || sq === lastMove.to)) cls.push("last");
+    if (sq === sel) cls.push("sel");
+    if (sq === ksq) cls.push("check");
+    let inner = "";
+    const p = st.board[sq];
+    if (p) inner += pieceHTML(p);
+    if (targets.some((m) => m.to === sq)) inner += p ? `<span class="ring"></span>` : `<span class="dot"></span>`;
+    const row = i >> 3, col = i & 7;
+    if (row === 7) inner += `<span class="coord f">${FILES[c]}</span>`;
+    if (col === 0) inner += `<span class="coord r">${8 - r}</span>`;
+    html += `<div class="${cls.join(" ")}" data-sq="${sq}">${inner}</div>`;
+  }
+  boardEl.innerHTML = html;
+  renderMoves(); renderCaptured();
+}
+
+function renderMoves() {
+  let h = "";
+  for (let i = 0; i < sanList.length; i += 2) {
+    h += `<li><span>${sanList[i]}</span><span>${sanList[i + 1] || ""}</span></li>`;
+  }
+  const el = $("moves");
+  el.innerHTML = h; el.scrollTop = el.scrollHeight;
+}
+
+function renderCaptured() {
+  const start = { P: 8, N: 2, B: 2, R: 2, Q: 1 };
+  const out = { w: "", b: "" };
+  for (const color of ["w", "b"]) {
+    for (const t of ["Q", "R", "B", "N", "P"]) {
+      const n = Math.max(0, start[t] - st.board.filter((p) => p === color + t).length);
+      for (let k = 0; k < n; k++) out[color] += pieceHTML(color + t);
+    }
+  }
+  $("capByW").innerHTML = out.b; // oq olgan qora donalar
+  $("capByB").innerHTML = out.w;
+}
+
+function updateStatus() {
+  statusEl.className = "status";
+  const name = (c) => (c === "w" ? "Oq" : "Qora");
+  const ms = legal(st);
+  if (!ms.length) {
+    over = true;
+    if (inCheck(st, st.turn)) { statusEl.textContent = `Mat! ${name(other(st.turn))} yutdi 🏆`; }
+    else statusEl.textContent = "Pat — durang";
+    statusEl.classList.add("done");
+    return;
+  }
+  if (st.board.filter(Boolean).length === 2) { over = true; statusEl.textContent = "Durang — faqat shohlar qoldi"; statusEl.classList.add("done"); return; }
+  if (st.half >= 100) { over = true; statusEl.textContent = "Durang — 50 yurish qoidasi"; statusEl.classList.add("done"); return; }
+  if (thinking) { statusEl.textContent = "Kompyuter oʻylayapti…"; return; }
+  let t = `${name(st.turn)} yuradi`;
+  if (inCheck(st, st.turn)) { t = `Shox! ${t}`; statusEl.classList.add("alert"); }
+  statusEl.textContent = t;
+}
+
+function doMove(m) {
+  const list = legal(st);
+  sanList.push(san(st, m, list));
+  hist.push({ st: st, lastMove: lastMove });
+  st = make(st, m); lastMove = m; sel = -1; targets = [];
+  updateStatus(); render(); maybeAI();
+}
+
+function maybeAI() {
+  if (mode !== "ai" || over || st.turn === humanColor) return;
+  thinking = true; updateStatus();
+  setTimeout(() => {
+    const m = bestMove(st, Number($("level").value));
+    thinking = false;
+    if (m) doMove(m);
+  }, 60);
+}
+
+function onClick(sq) {
+  if (over || thinking) return;
+  if (mode === "ai" && st.turn !== humanColor) return;
+  if (sel >= 0) {
+    const cand = targets.filter((m) => m.to === sq);
+    if (cand.length > 1) return askPromo(cand);
+    if (cand.length === 1) return doMove(cand[0]);
+  }
+  const p = st.board[sq];
+  if (p && p[0] === st.turn && sq !== sel) {
+    sel = sq; targets = legal(st).filter((m) => m.from === sq);
+  } else { sel = -1; targets = []; }
+  render();
+}
+
+function askPromo(cand) {
+  const box = $("promoChoices");
+  box.innerHTML = "";
+  for (const t of ["Q", "R", "B", "N"]) {
+    const btn = document.createElement("button");
+    btn.innerHTML = pieceHTML(st.turn + t);
+    btn.onclick = () => { $("promo").classList.add("hidden"); doMove(cand.find((m) => m.promo === t)); };
+    box.appendChild(btn);
+  }
+  $("promo").classList.remove("hidden");
+}
+
+function undo() {
+  if (thinking || !hist.length) return;
+  let steps = 1;
+  if (mode === "ai") steps = st.turn === humanColor ? 2 : 1;
+  for (let i = 0; i < steps && hist.length; i++) {
+    const h = hist.pop(); st = h.st; lastMove = h.lastMove; sanList.pop();
+  }
+  over = false; sel = -1; targets = [];
+  updateStatus(); render(); maybeAI();
+}
+
+boardEl.addEventListener("click", (e) => {
+  const el = e.target.closest(".sq");
+  if (el) onClick(Number(el.dataset.sq));
+});
+$("newBtn").onclick = newGame;
+$("undoBtn").onclick = undo;
+$("flipBtn").onclick = () => { flipped = !flipped; render(); };
+$("mode").onchange = newGame;
+$("color").onchange = newGame;
+
+newGame();
+</script>
+</body>
+</html>
